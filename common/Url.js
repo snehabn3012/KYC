@@ -10,8 +10,8 @@ var BASE_URL = {
 
  exports.getAPI = function(api) {
    var KYC_URL = {
-    GET_IFI_SPECIFIC_APPLN : 'https://api.stage.zeta.in/zeta.in/app-portal/1.0/getIfiSpecificKycApplication?userId=126911&ifi=141618&token=U2xVRWR6OHI4UVdaQi9TeFVPOWljTFJmc1lhc1ozK1dwWG42V1dMSmhSSThKNXRRWWlJbytoWT06QVFGYy9La2tPOVpqeXE2dUJwNnRJWjA3U250eVFFQWVZc3hmUVFwZXg0RDNWU09rNTRvc3JGZXh4cnlRUUxCTXZoZEtmbjFVZHptN2hzRjJJVGxVZ0doOWdHMC82M1NhWHp5ZDFDMWlDeUJkM3QyeldFeFVGdXcyYktKcW16VTFDeDlZSVdvTEQ2ZFY1ODBkdFZ1cXEyWUV1SUZwSTRaditRPT0=',
-    GET_KYC : 'https://api.stage.zeta.in/zeta.in/zetauser/1.0/getKyc?userID=126911&token=U2xVRWR6OHI4UVdaQi9TeFVPOWljTFJmc1lhc1ozK1dwWG42V1dMSmhSSThKNXRRWWlJbytoWT06QVFGYy9La2tPOVpqeXE2dUJwNnRJWjA3U250eVFFQWVZc3hmUVFwZXg0RDNWU09rNTRvc3JGZXh4cnlRUUxCTXZoZEtmbjFVZHptN2hzRjJJVGxVZ0doOWdHMC82M1NhWHp5ZDFDMWlDeUJkM3QyeldFeFVGdXcyYktKcW16VTFDeDlZSVdvTEQ2ZFY1ODBkdFZ1cXEyWUV1SUZwSTRaditRPT0='
+    GET_IFI_SPECIFIC_APPLN : 'https://api.stage.zeta.in/zeta.in/app-portal/1.0/getIfiSpecificKycApplication?userId=155757&ifi=141618&token=NFcveWFuRnBRSmVIeFVYUzRjejltWmRQVDAvczNweHpzVFgxdVA5bGZoWDFQYlIrVndzQy9GNXowVjA9OkFRSGZEck9DdHBMNk1oN01XWkNnWlFWcE9xWG5qSUZQMTJmRG9hTWFxVEZvUDZvaUhWOEhiT1l0UzBUSVNwZklScUxVaUhOei9VMjB4R1o1WGRYWE1DUFpqUE12eVNqVzJjTzRjaFUwdlZyMDlUa3NieWMrbzdQRzV5dEtDbldKVmRZQng1S2I4UjFQZlpSQ3hMVGdaOE5aMHRnWXkvUE9pRDZObUJUblNnPT0=',
+    GET_KYC : 'https://api.stage.zeta.in/zeta.in/zetauser/1.0/getKycV2'
    };
   return KYC_URL[api];
 };

@@ -3,6 +3,7 @@ var Env = require('./common/Env');
 var Utils = require('./common/Utils');
 var Url = require('./common/Url');
 var ifiList = Utils.AVAILABLE_IFI[Env.CURR_ENV];
+var ifiValue = Utils.IFI_VALUE[Env.CURR_ENV];
 var KOTAK_IFI = ifiList['KOTAK'];
 var SODEXO_IFI =ifiList['SODEXO'];
 var payload = {
@@ -11,149 +12,12 @@ var payload = {
 };
 var primaryIFI = 140793;
 var MinKycifi = [],  // data contains IFI which has to be min kyced
-FullKycifi = [],    // data contains IFI which are full kyced
-kycStates;
-
-function init() {
-    kycAPI('GET_KYC').then(function(kycData) {
-        kycStates = kycData.effectiveKycStates;
-        kycStates = {
-            "140793": "MINIMAL",
-            "140827": "MINIMAL",
-            "141617": "SHORTFALL_CORP",
-            "141618": "SHORTFALL_CORP",
-            "156699": "MINIMAL"
-        },
-        isFullyKyced();
-        Object.keys(kycStates).forEach(function(key) {
-            if(invokeKyc(kycStates[key], 'MIN_KYC')) {
-                MinKycifi.push(key);
-            }
-        });
-        if(MinKycifi.includes(SODEXO_IFI)) {
-            removeKyc(SODEXO_IFI)
-        }
-        if(MinKycifi.includes(KOTAK_IFI) && kycData.kycInfos.length > 0) {
-            if(checkKycInfo(kycData.kycInfos, 'status')) {
-                updateKycStatus('INITIATED');
-            } else if(checkKycInfo(kycData.kycInfos, 'crn')) {
-                updateKycStatus('KYC_SHORTFALL');
-            } else {
-                invokeDeDupe(kycStates[KOTAK_IFI]);                
-            }
-        } else {
-            createIfiMap();
-        }
-    },function(error) {
-        console.log(error);
-    });
-};
-
-init();
-
-function initiateMinKyc() {
-    return MinKycifi.length > 0;
-}
-
-function createIfiMap() {
-    Object.keys(ifiList).forEach(key => {
-        var temp = {};
-        temp.name = key;
-        temp.ifi = ifiList[key];
-        if(MinKycifi.indexOf(ifiList[key]) > -1) {
-            temp.isMinKyced = false;
-            temp.isFullKyced = false;
-        } else if(FullKycifi.indexOf(ifiList[key]) > -1) {
-            temp.isMinKyced = true;
-            temp.isFullKyced = false;
-        } else {
-            temp.isMinKyced = true;
-            temp.isFullKyced = true;
-        }
-        payload.ifiKycMap.push(temp);
-    });
-    payload.isFullyKyced = isFullyKyced();
-    payload.isPrimaryifiKyced = isPrimaryIFIKyced();
-    payload.initiateMinKyc = initiateMinKyc();
-    console.log('Any ifi not Min Kyced -->', payload.initiateMinKyc);
-    console.log('payload', payload);
-};
-
-function isPrimaryIFIKyced() {
-    if(MinKycifi.includes(primaryIFI)) {
-        return false;
-    } else {
-        return true;
-    }
-}
-
-function isFullyKyced() {
-    var flag;
-    Object.keys(kycStates).forEach(function(key) {
-        if(!invokeKyc(kycStates[key], 'FULL_KYC')) {
-            FullKycifi.push(key);
-        }
-    });
-    if(FullKycifi.length > 0) {
-        flag = false;
-    } else {
-        flag = true;
-    }
-    return flag;
-};
-
-
-function checkKycInfo(kycInfo, key) {
-    for(let i=0; i<kycInfo.length; i++) {
-        if(kycInfo[i].ifiID === KOTAK_IFI && (key === 'status' ? kycInfo[i][key] === "INITIATED" : key in kycInfo[i].attrs)) {
-            createIfiMap();
-            removeKyc(KOTAK_IFI);
-            return true;
-        }
-    }
-};
-
-function invokeDeDupe(kotakStatus) {
-    kycAPI('GET_IFI_SPECIFIC_APPLN').then(function(response) {
-        if(response.finalKycStatus === 'REJECTED' && response.status === 'COMPLETED') {
-            response.status = 'KYC_SHORTFALL';
-        } else {
-            response.status = (response.status == 'FAILED' || response.status == 'NAME_MISMATCH') ? 'PROCESSING' : response.status;
-        }
-        kotakStatus = response.status;
-        updateKycStatus(kotakStatus);
-        if(!invokeKyc(kotakStatus, 'MIN_KYC')) {
-            removeKyc(KOTAK_IFI);
-        } else {
-            payload.hasKotak = true;  
-        }
-        createIfiMap();
-    })
-    .catch(function(err) {
-        console.log('err', err);
-    });
-};
-
-function removeKyc(ifi) {
-    MinKycifi = MinKycifi.filter(function(item) {
-        return item !== ifi
-    });
-}
-
-function updateKycStatus(kotakStatus) {
-    var source = 'ZOW';
-    payload.kotak.status = kotakStatus;
-    payload.kotak.description = STATUS_MSG[source][kotakStatus];
-}
+FullKycifi = [],    // data contains IFI which has to be full kyced
+kycData = {}, kycStates, showBanner = false;
 
 var KYC_INITIATOR = {
     MIN_KYC     :   ['SHORTFALL_CORP', 'SHORTFALL_NON_CORP', 'INVALID_PAN', 'NO_APPLICATION_FOUND'],
-    // FULL_KYC    :   ['MINIMAL', 'EXPIRED_CORP', 'EXPIRED_NON_CORP']
-    FULL_KYC    :   ['AADHAAR_BIOMETRIC','AADHAAR_OTP','E_KYC','PAPER']
-};
-
-function invokeKyc(kycStatus, type) {
-    return KYC_INITIATOR[type].indexOf(kycStatus) > -1;
+    FULL_KYC    :   ['MINIMAL']
 };
 
 var STATUS_MSG = {
@@ -171,11 +35,187 @@ var STATUS_MSG = {
     }
 };
 
-function kycAPI (api) {
-    return Axios.get(Url.getAPI(api)).then(function (response) {
-        return response.data;
-    })
-    .catch(function(error) {
+function init(userID, authToken) {
+    var reqObj = {
+        params : {
+          userID    : 155757,
+          isSecure  : true
+        }
+    };
+    kycAPI('GET_KYC', reqObj).then(function(kycData) {
+        kycData = kycData;
+        kycStates = kycData.effectiveKycStates;
+        payload.userData = {};
+        payload.userData.name = kycData.name;
+        payload.userData.userID = kycData.userID;
+        payload.userData.dob = kycData.dob;
+        payload.userData.panNumber = kycData.panNumber;
+        payload.userData.aadhaarNumber = kycData.aadhaarNumber;
+        if(kycData.hasOwnProperty('kycInfos')) {
+            payload.userData.gender = kycData.kycInfos[0].gender;
+            payload.userData.address = kycData.kycInfos[0].address;
+        }
+        isFullyKyced();
+        Object.keys(kycStates).forEach(function(key) {
+            if(invokeKyc(kycStates[key], 'MIN_KYC')) {
+                MinKycifi.push(key);
+            }
+        });
+        if(MinKycifi.includes(SODEXO_IFI)) {
+            removeKyc(SODEXO_IFI)
+        }
+        if(MinKycifi.includes(KOTAK_IFI) && kycData.kycInfos.length > 0) {
+            if(checkKycInfo(kycData.kycInfos, 'status')) {
+                updateKycStatus('INITIATED');
+            } else if(checkKycInfo(kycData.kycInfos, 'crn')) {
+                updateKycStatus('KYC_SHORTFALL');
+            } else {
+                invokeDeDupe(kycStates[KOTAK_IFI]);
+            }
+        } else {
+            createIfiMap(); // conclusion
+        }
+    },function(error) {
         console.log(error);
     });
+};
+
+init();
+
+function getEffectiveKycStatus() {  // expose fn
+    return kycStates;
+};
+
+function ifiBasedInfo(ifi) {    // expose fn
+    kycData.kycInfo.forEach(function(item) {
+        if(item.ifiID === ifi) {
+            return item;
+        }
+    });
+};
+
+function initiateMinKyc() { // expose fn
+    return MinKycifi.length > 0;
 }
+
+function createIfiMap() {
+    Object.keys(kycStates).forEach(key => {
+        var temp = {};
+        key = key.toString();
+        temp.ifi = key;
+        temp.name = ifiValue[key];
+        if(MinKycifi.indexOf(key) > -1) {
+            temp.isMinKyced = false;
+            temp.isFullKyced = false;
+        } else if(FullKycifi.indexOf(key) > -1) {
+            temp.isMinKyced = true;
+            temp.isFullKyced = false;
+        } else {
+            temp.isMinKyced = true;
+            temp.isFullKyced = true;
+        }
+        payload.ifiKycMap.push(temp);
+    });
+    payload.isFullyKyced = isFullyKyced();
+    payload.isPrimaryifiKyced = isPrimaryIFIKyced();
+    payload.initiateMinKyc = initiateMinKyc();
+    console.log('payload', payload);
+};
+
+function isPrimaryIFIKyced() {  // expose fn
+    if(MinKycifi.includes(primaryIFI)) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+function isFullyKyced() {   // expose fn
+    var flag; FullKycifi =[];
+    Object.keys(kycStates).forEach(function(key) {
+        if(invokeKyc(kycStates[key], 'FULL_KYC')) {
+            FullKycifi.push(key);
+        }
+    });
+    if(FullKycifi.length > 0) {
+        flag = false;
+    } else {
+        flag = true;
+    }
+    return flag;
+};
+
+
+function checkKycInfo(kycInfo, key) {
+    for(let i=0; i<kycInfo.length; i++) {
+        if(kycInfo[i].ifiID === KOTAK_IFI && (key === 'status' ? (kycInfo[i].kycType === "SHORT_FALL" && kycInfo[i].authType === 'EXTERNAL') : key in kycInfo[i].attrs)) {
+            createIfiMap();
+            removeKyc(KOTAK_IFI);
+            return true;
+        }
+    }
+};
+
+function invokeDeDupe(kotakStatus) {
+    var reqObj = {
+        params : {
+          userID    : 126911,
+          ifi       : 141618
+        }
+    };
+    kycAPI('GET_IFI_SPECIFIC_APPLN', reqObj).then(function(response) {
+        payload.showBanner = true;
+        payload.userData = response;
+        if(response.finalKycStatus === 'REJECTED' && response.status === 'COMPLETED') {
+            response.status = 'KYC_SHORTFALL';
+        } else {
+            response.status = (response.status == 'FAILED' || response.status == 'NAME_MISMATCH') ? 'PROCESSING' : response.status;
+        }
+        kotakStatus = response.status;
+        updateKycStatus(kotakStatus);
+        if(!invokeKyc(kotakStatus, 'MIN_KYC')) {
+            removeKyc(KOTAK_IFI);
+        } else {
+            payload.hasKotak = true;
+        }
+        createIfiMap();
+    })
+    .catch(function(err) {
+        console.log('err', err);
+    });
+};
+
+function showBanner() { // expose fn
+    return showBanner;
+};
+
+function removeKyc(ifi) {
+    MinKycifi = MinKycifi.filter(function(item) {
+        return item !== ifi
+    });
+}
+
+function updateKycStatus(kotakStatus) {
+    var source = 'ZOW';
+    payload.kotak.status = kotakStatus;
+    payload.kotak.description = STATUS_MSG[source][kotakStatus];
+}
+
+function invokeKyc(kycStatus, type) {
+    return KYC_INITIATOR[type].indexOf(kycStatus) > -1;
+};
+
+function kycAPI (api, req) {
+    req.headers = {
+        'X-Zeta-AuthToken': 'NFcveWFuRnBRSmVIeFVYUzRjejltWmRQVDAvczNweHpzVFgxdVA5bGZoWDFQYlIrVndzQy9GNXowVjA9OkFRSGZEck9DdHBMNk1oN01XWkNnWlFWcE9xWG5qSUZQMTJmRG9hTWFxVEZvUDZvaUhWOEhiT1l0UzBUSVNwZklScUxVaUhOei9VMjB4R1o1WGRYWE1DUFpqUE12eVNqVzJjTzRjaFUwdlZyMDlUa3NieWMrbzdQRzV5dEtDbldKVmRZQng1S2I4UjFQZlpSQ3hMVGdaOE5aMHRnWXkvUE9pRDZObUJUblNnPT0='
+    };
+    return Axios.get(Url.getAPI(api), req)
+    .then(function (response) {
+        console.log('response', response.data);
+        return response;
+    })
+    .catch(function(error) {
+        return response.data;
+        console.log(error);
+    });
+};
