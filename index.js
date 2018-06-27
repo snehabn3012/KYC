@@ -46,8 +46,11 @@ const kyc = {
                 temp.isMinKyced = true;
                 temp.isFullKyced = true;
             }
-            payload.ifiKycMap.push(temp);
+            if(temp.ifi !== '156699') {
+                payload.ifiKycMap.push(temp);                
+            }
         });
+        
         payload.isFullyFullKyced = isFullyKyced();
         payload.isPrimaryifiKyced = isPrimaryIFIKyced();
         payload.initiateMinKyc = initiateMinKyc();
@@ -119,6 +122,7 @@ function init(kycData, dedupe) {
     if(MinKycifi.includes(SODEXO_IFI)) {
         kyc.removeKyc(SODEXO_IFI)
     }
+    kyc.removeKyc('156699');
     if(MinKycifi.includes(KOTAK_IFI) && kycData.kycInfos.length > 0) {
         if(kyc.checkKycInfo(kycData.kycInfos, 'status')) {
             kyc.updateKycStatus('INITIATED');
@@ -144,11 +148,11 @@ function invokeDeDupe(res) {
     return payload;
 };
 
-function getEffectiveKycStatus() {
+function getEffectiveKycStatus() {  // expose fn
     return kycStates;
 };
 
-function ifiBasedInfo(ifi) {
+function ifiBasedInfo(ifi) {    // expose fn
     var i,kycInfo = kycData.kycInfos;
     for(i=0;i<=kycInfo.length;i++) {
         if(kycInfo[i].ifiID == ifi) {
@@ -165,11 +169,12 @@ function isCorpUser() {
     return kycData.isCorpUser;
 }
 
-function initiateMinKyc() {
+function initiateMinKyc() { // expose fn
     return MinKycifi.length > 0;
 };
 
-function isPrimaryIFIKyced() {
+function isPrimaryIFIKyced() {  // expose fn
+    var primaryIFI = '140793'
     if(MinKycifi.includes(primaryIFI)) {
         return false;
     } else {
@@ -177,11 +182,11 @@ function isPrimaryIFIKyced() {
     }
 };
 
-function isFullyKyced() {
+function isFullyKyced() {   // expose fn
     return FullKycifi.length === Object.keys(kycStates).length;
 };
 
-function showBanner() {
+function showBanner() { // expose fn
     return bannerFlag;
 };
 
