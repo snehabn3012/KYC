@@ -134,9 +134,9 @@ var kyc = {
         this.createIfiMap();
     },
     removeKyc: function (ifi) {
-        // MinKycifi = MinKycifi.filter(function (item) {
-        //     return item !== ifi;
-        // });
+        MinKycifi = MinKycifi.filter(function (item) {
+            return item !== ifi;
+        });
     },
     updateKycStatus: function (kotakStatus, source) {
         payload.kotak.status = kotakStatus;
