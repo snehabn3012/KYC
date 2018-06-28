@@ -160,7 +160,7 @@ function init(res, env, dedupe) {
     payload.userData.dob = kycData.dob;
     payload.userData.panNumber = kycData.panNumber;
     payload.userData.aadhaarNumber = kycData.aadhaarNumber;
-    if (kycData.hasOwnProperty('kycInfos')) {
+    if (kycData.hasOwnProperty('kycInfos') && kycData.kycInfos.length > 0) {
         payload.userData.gender = kycData.kycInfos[0].gender;
         payload.userData.address = kycData.kycInfos[0].address;
     }
