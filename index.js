@@ -106,7 +106,7 @@ var kyc = {
     },
     checkKycInfo: function (kycInfo, key) {
         for (var i = 0; i < kycInfo.length; i++) {
-            if (kycInfo[i].ifiID === KOTAK_IFI && (key === 'status' ? kycInfo[i].kycType === "SHORT_FALL" && kycInfo[i].authType === 'EXTERNAL' : key in kycInfo[i].attrs)) {
+            if (kycInfo[i].ifiID === KOTAK_IFI && (key === 'status' ? kycInfo[i].kycType === "SHORT_FALL" && kycInfo[i].authType === 'DEFAULT' : key in kycInfo[i].attrs)) {
                 this.createIfiMap();
                 this.removeKyc(KOTAK_IFI);
                 return true;
