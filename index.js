@@ -178,10 +178,10 @@ function init(res, env, dedupe) {
         kyc.removeKyc(SODEXO_IFI);
     }
     kyc.removeKyc('156699');
-    if (MinKycifi.includes(KOTAK_IFI) && kycData.kycInfos.length > 0) {
-        if (kyc.checkKycInfo(kycData.kycInfos, 'status')) {
+    if (MinKycifi.includes(KOTAK_IFI)) {
+        if (isKycInfoAvailable() && kyc.checkKycInfo(kycData.kycInfos, 'status')) {
             kyc.updateKycStatus('INITIATED');
-        } else if (kyc.checkKycInfo(kycData.kycInfos, 'crn')) {
+        } else if (isKycInfoAvailable() && kyc.checkKycInfo(kycData.kycInfos, 'crn')) {
             kyc.updateKycStatus('KYC_SHORTFALL');
         } else {
             if (dedupe) {
@@ -197,6 +197,10 @@ function init(res, env, dedupe) {
     }
     return payload;
 };
+
+function isKycInfoAvailable() {
+    return kycData.kycInfos.length > 0;
+}
 
 function invokeDeDupe(res) {
     kyc.dedupeHandler(res);
